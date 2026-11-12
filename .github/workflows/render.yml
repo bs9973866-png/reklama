@@ -1,0 +1,29 @@
+name: Render RedShift Launcher Ad
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Generate Russian voiceover
+        run: |
+          python -m pip install --upgrade edge-tts
+          mkdir -p public out
+          edge-tts --voice ru-RU-DmitryNeural --rate=+4% --text 'Minecraft — это не просто игра. Это твой мир. И запускать его должно быть так же удобно, как играть. RedShift Launcher помогает выбрать нужную версию Minecraft и держать игровые профили под контролем. Хочешь другой геймплей? Настраивай сборку, подбирай моды и создавай собственный игровой опыт. Настрой параметры запуска под себя. Никакой лишней суеты перед тем, как зайти в игру. Открыл лаунчер, выбрал профиль — и можно отправляться навстречу новым приключениям. RedShift Launcher. Скачивай и попробуй. Твой Minecraft начинается здесь.' --write-media public/voice.mp3
+      - name: Render MP4
+        run: npx remotion render src/index.ts RedshiftAd out/redshift-launcher-ad.mp4 --codec h264 --crf 18
+      - uses: actions/upload-artifact@v4
+        with:
+          name: redshift-launcher-ad
+          path: out/redshift-launcher-ad.mp4
+          retention-days: 14
