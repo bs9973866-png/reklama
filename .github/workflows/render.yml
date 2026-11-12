@@ -1,4 +1,4 @@
-name: Render RedShift Launcher Ad
+name: Render REDSHIFT Launcher Ad
 
 on:
   push:
@@ -9,9 +9,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: redshift-ad-render
+  cancel-in-progress: true
+
 jobs:
   render:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Checkout repository
@@ -33,28 +37,39 @@ jobs:
       - name: Install Remotion browser
         run: npx remotion browser ensure
 
-      - name: Generate Russian voiceover
-        shell: bash
+      - name: Install offline neural voice engine
         run: |
-          python -m venv .venv
-          .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/pip install edge-tts
-          mkdir -p public out
-          .venv/bin/edge-tts \
-            --voice ru-RU-DmitryNeural \
-            --rate=+4% \
-            --text 'Minecraft — это не просто игра. Это твой мир. И запускать его должно быть так же удобно, как играть. RedShift Launcher помогает выбрать нужную версию Minecraft и держать игровые профили под контролем. Хочешь другой геймплей? Настраивай сборку, подбирай моды и создавай собственный игровой опыт. Настрой параметры запуска под себя. Никакой лишней суеты перед тем, как зайти в игру. Открыл лаунчер, выбрал профиль — и можно отправляться навстречу новым приключениям. RedShift Launcher. Скачивай и попробуй. Твой Minecraft начинается здесь.' \
-            --write-media public/voice.mp3
-          test -s public/voice.mp3
+          python -m pip install --upgrade pip
+          python -m pip install "piper-tts==1.8.0"
+          mkdir -p models public out
+          curl --fail --location --retry 4 --retry-delay 2 \
+            "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx" \
+            --output models/ru_RU-dmitri-medium.onnx
+          curl --fail --location --retry 4 --retry-delay 2 \
+            "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx.json" \
+            --output models/ru_RU-dmitri-medium.onnx.json
+          test "$(stat -c%s models/ru_RU-dmitri-medium.onnx)" -gt 50000000
+          test -s models/ru_RU-dmitri-medium.onnx.json
+
+      - name: Generate Russian neural voiceover
+        run: python scripts/generate_voice.py
 
       - name: Type-check project
         run: npx tsc --noEmit
 
       - name: Render MP4
-        run: npx remotion render src/index.ts RedshiftAd out/redshift-launcher-ad.mp4 --codec h264 --crf 18
+        run: >-
+          npx remotion render src/index.ts RedshiftAd
+          out/redshift-launcher-ad.mp4
+          --codec h264
+          --crf 18
+          --audio-codec aac
 
       - name: Verify rendered video
-        run: test -s out/redshift-launcher-ad.mp4
+        run: |
+          test -s out/redshift-launcher-ad.mp4
+          ffprobe -v error -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 out/redshift-launcher-ad.mp4
 
       - name: Upload rendered video
         uses: actions/upload-artifact@v4

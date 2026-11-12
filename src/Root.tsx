@@ -38,5 +38,5 @@ const Scene=({s,i}:{s:typeof scenes[number];i:number})=>{
  <div style={{position:'absolute',bottom:0,left:0,height:4,width:`${(f/(fps*7.5))*100}%`,background:'linear-gradient(90deg,#ff4fd8,#54f1e5)'}}/>
  </AbsoluteFill>
 };
-const Ad:React.FC=()=> <AbsoluteFill><Audio src={staticFile('voice.mp3')} volume={1}/>{scenes.map((s,i)=><Sequence key={s.kind} from={i*450} durationInFrames={450}><Scene s={s} i={i}/></Sequence>)}</AbsoluteFill>;
+const Ad:React.FC=()=> <AbsoluteFill><Audio src={staticFile('voice.wav')} volume={1}/>{scenes.map((s,i)=><Sequence key={s.kind} from={i*450} durationInFrames={450}><Scene s={s} i={i}/></Sequence>)}</AbsoluteFill>;
 export const Root:React.FC=()=> <Composition id="RedshiftAd" component={Ad} durationInFrames={2700} fps={60} width={1920} height={1080}/>;
