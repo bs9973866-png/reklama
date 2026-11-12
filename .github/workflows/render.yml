@@ -67,9 +67,21 @@ jobs:
 
       - name: Verify rendered video
         run: |
-          test -s out/redshift-launcher-ad.mp4
-          ffprobe -v error -show_entries format=duration,size \
-            -of default=noprint_wrappers=1 out/redshift-launcher-ad.mp4
+          python - <<'PY'
+          from pathlib import Path
+
+          video = Path("out/redshift-launcher-ad.mp4")
+          if not video.is_file():
+              raise SystemExit("Rendered MP4 is missing.")
+          size = video.stat().st_size
+          with video.open("rb") as stream:
+              header = stream.read(12)
+          if size < 500_000 or header[4:8] != b"ftyp":
+              raise SystemExit(
+                  f"MP4 verification failed: size={size}, header={header!r}"
+              )
+          print(f"Verified MP4 container: {size:,} bytes")
+          PY
 
       - name: Upload rendered video
         uses: actions/upload-artifact@v4
